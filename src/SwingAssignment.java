@@ -1,32 +1,36 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
-import java.awt.image.BufferedImage;
 
 /**
  * SwingAssignment is the main class for this PROG209 assignment.
  *
  * Inheritance:
- *   SwingAssignment extends BaseWindow, so it reuses the JFrame setup,
- *   colours, and icon drawing from the parent class.
+ *   SwingAssignment extends BaseWindow, so it reuses the colour palette,
+ *   icon loading, and colour utilities from the parent class.
  *
- * Constructor:
- *   The constructor below calls super(...) first, then builds the GUI.
+ * Constructor chaining:
+ *   SwingAssignment() -> SwingAssignment(String) -> super(String, String)
  *
  * Event driven programming:
- *   Each button has an ActionListener that runs when the button is clicked.
- *
+ *   Buttons, links, a text field, and keyboard shortcuts each wire an
+ *   ActionListener that runs when the matching event fires.
  *
  * Author: Mohamed Barry
  */
 public class SwingAssignment extends BaseWindow {
 
-    // Texts shown when the Change Text button is clicked
+    // Required by the assignment: created and instantiated here, not inherited
+    private JFrame frame;
+    private JPanel panel;
+    private JLabel label;
+
+    // Texts cycled by the Change Text button
     private static final String[] LABEL_TEXTS = {
         "Welcome to Java Swing First Individual Assignment by Mohamed Barry",
         "Java Swing — Event Driven Programming",
@@ -35,7 +39,7 @@ public class SwingAssignment extends BaseWindow {
     };
     private int labelTextIndex = 0;
 
-    // Background colours shown when the Change Background button is clicked
+    // Background colours cycled by the Change Background button
     private static final Color[] BG_COLORS = {
         BG_LIGHT,
         new Color(220, 245, 232),
@@ -44,151 +48,142 @@ public class SwingAssignment extends BaseWindow {
     };
     private int bgColorIndex = 0;
 
-    // Centre area (icon, heading, buttons, footer info)
-    private JPanel centrePanel;
-    private JPanel buttonRow;
-    private JPanel infoRow;
+    private String currentLabelText;
+    private Color currentBgColor = BG_LIGHT;
+    private Timer fadeTimer;
+    private int eventCount = 0;
 
-    /**
-     * Constructor for the child class.
-     * super(...) runs the BaseWindow constructor first.
-     */
+    private JPanel southPanel;
+    private JTextField messageField;
+    private JLabel statusLabel;
+
+    /** No-arg constructor chains to the named-author constructor. */
     public SwingAssignment() {
-        super("Java Swing Assignment");
+        this("Mohamed Barry");
+    }
+
+    /** Named-author constructor chains up to BaseWindow via super(...). */
+    public SwingAssignment(String authorName) {
+        super("Java Swing Assignment", authorName);
+        currentLabelText = LABEL_TEXTS[0];
+        initFrame();
         buildUI();
         frame.setVisible(true);
     }
 
-    /**
-     * Builds the full window layout to match the Figma wireframe:
-     * navy wave header, centred content, info bar, navy wave footer.
-     */
-    private void buildUI() {
-        panel = new JPanel(new BorderLayout());
-        panel.setBackground(BG_LIGHT);
-        frame.setContentPane(panel);
-
-        panel.add(new WaveBanner(true), BorderLayout.NORTH);
-
-        centrePanel = buildCentre();
-        panel.add(centrePanel, BorderLayout.CENTER);
-
-        panel.add(new WaveBanner(false), BorderLayout.SOUTH);
+    /** Creates and configures the JFrame required by the assignment. */
+    private void initFrame() {
+        frame = new JFrame(windowTitle);
+        frame.setIconImage(loadApplicationIcon().getImage());
+        frame.setSize(800, 800);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLocationRelativeTo(null);
+        frame.setResizable(false);
     }
 
     /**
-     * Creates the middle of the window: coffee icon, welcome label,
-     * two action buttons, and the course / year information.
+     * Builds the window layout: header (icon + wave), the welcome label
+     * centred directly on panel, and a footer section with the controls.
      */
-    private JPanel buildCentre() {
-        JPanel centre = new JPanel();
-        centre.setLayout(new BoxLayout(centre, BoxLayout.Y_AXIS));
-        centre.setBackground(BG_LIGHT);
-        centre.setBorder(BorderFactory.createEmptyBorder(10, 50, 8, 50));
+    private void buildUI() {
+        panel = new JPanel(new BorderLayout());
+        panel.setBackground(currentBgColor);
+        frame.add(panel);
 
-        centre.add(Box.createVerticalGlue());
+        panel.add(buildHeader(), BorderLayout.NORTH);
 
-        JLabel iconLabel = new JLabel(new ImageIcon(renderCentreIcon(168)));
-        iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centre.add(iconLabel);
+        // Required JLabel — added straight onto panel, no wrapper panel
+        label = new JLabel(formatWelcome(currentLabelText), SwingConstants.CENTER);
+        label.setBorder(BorderFactory.createEmptyBorder(10, 40, 10, 40));
+        panel.add(label, BorderLayout.CENTER);
 
-        centre.add(Box.createVerticalStrut(28));
+        southPanel = buildSouth();
+        panel.add(southPanel, BorderLayout.SOUTH);
+    }
 
-        // Required JLabel — wrapped in a FlowLayout panel so BoxLayout centres it properly
-        label = new JLabel(formatWelcome(LABEL_TEXTS[0]), SwingConstants.CENTER);
-        JPanel labelWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        labelWrapper.setOpaque(false);
-        labelWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
-        labelWrapper.add(label);
-        centre.add(labelWrapper);
+    /** Header: navy wave with the coffee badge painted on top of it. */
+    private JPanel buildHeader() {
+        WaveBanner header = new WaveBanner(true);
+        header.setLayout(new GridBagLayout());
+        JLabel badge = new JLabel(new ImageIcon(renderBadge(72)));
+        header.add(badge);
+        return header;
+    }
 
-        centre.add(Box.createVerticalStrut(36));
+    /** Footer section: message box, buttons, links, status line, info row, wave. */
+    private JPanel buildSouth() {
+        JPanel south = new JPanel();
+        south.setLayout(new BoxLayout(south, BoxLayout.Y_AXIS));
+        south.setBackground(currentBgColor);
+        south.setBorder(BorderFactory.createEmptyBorder(4, 40, 0, 40));
 
-        buttonRow = buildButtonRow();
-        buttonRow.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centre.add(buttonRow);
-
-        centre.add(Box.createVerticalGlue());
+        south.add(buildMessageRow());
+        south.add(Box.createVerticalStrut(10));
+        south.add(buildButtonRow());
+        south.add(Box.createVerticalStrut(6));
+        south.add(buildLinkRow());
+        south.add(Box.createVerticalStrut(4));
+        south.add(buildStatusRow());
+        south.add(Box.createVerticalStrut(10));
 
         JSeparator line = new JSeparator();
         line.setForeground(DIVIDER);
         line.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        centre.add(line);
+        south.add(line);
 
-        centre.add(Box.createVerticalStrut(14));
-
-        infoRow = buildInfoRow();
-        infoRow.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centre.add(infoRow);
-
-        centre.add(Box.createVerticalStrut(6));
-        return centre;
+        south.add(Box.createVerticalStrut(8));
+        south.add(buildInfoRow());
+        south.add(Box.createVerticalStrut(6));
+        south.add(new WaveBanner(false));
+        return south;
     }
 
-    /**
-     * Formats the welcome heading so it looks like the Figma layout:
-     * large bold title, smaller grey author line underneath.
-     */
-    private String formatWelcome(String text) {
-        String title = text;
-        String author = "";
-
-        if (text.contains(" by ")) {
-            int at = text.lastIndexOf(" by ");
-            title = text.substring(0, at);
-            author = "by " + text.substring(at + 4);
-        }
-
-        // Match the Figma two-line heading
-        title = title.replace("First Individual", "First<br>Individual");
-
-        return "<html><div style='text-align:center; width:640px;'>"
-                + "<span style='font-family:Segoe UI; font-size:22px; font-weight:bold; color:#12264E;'>"
-                + title
-                + "</span>"
-                + (author.isEmpty()
-                    ? ""
-                    : "<br><span style='font-family:Segoe UI; font-size:14px; font-weight:normal; color:#697691;'>"
-                        + author + "</span>")
-                + "</div></html>";
-    }
-
-    /** Draws the large circular coffee icon used in the centre of the window. */
-    private BufferedImage renderCentreIcon(int size) {
-        BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = img.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        drawCoffeeBadge(g, 0, 0, size);
-        g.dispose();
-        return img;
-    }
-
-    /**
-     * Creates the two event-driven buttons from the wireframe.
-     */
-    private JPanel buildButtonRow() {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 22, 0));
+    /** Text box: type a custom message, press Enter to show it in the label. */
+    private JPanel buildMessageRow() {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         row.setOpaque(false);
-        row.setMaximumSize(new Dimension(700, 58));
+        row.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        RoundedButton changeTextBtn = new RoundedButton("Change Text", BTN_BLUE, true);
-        changeTextBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // Event: Change Text was clicked → update the JLabel
-                labelTextIndex = (labelTextIndex + 1) % LABEL_TEXTS.length;
-                label.setText(formatWelcome(LABEL_TEXTS[labelTextIndex]));
+        JLabel hint = new JLabel("Type a message and press Enter:");
+        hint.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        hint.setForeground(TEXT_MUTED);
+
+        messageField = new JTextField(26);
+        messageField.addActionListener(e -> {
+            String typed = messageField.getText().trim();
+            if (!typed.isEmpty()) {
+                currentLabelText = typed;
+                refreshLabel();
+                recordEvent("Custom message shown");
             }
         });
 
+        row.add(hint);
+        row.add(messageField);
+        return row;
+    }
+
+    /** Change Text / Change Background buttons. */
+    private JPanel buildButtonRow() {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 22, 0));
+        row.setOpaque(false);
+        row.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        RoundedButton changeTextBtn = new RoundedButton("Change Text", BTN_BLUE, true);
+        changeTextBtn.setMnemonic(KeyEvent.VK_T);
+        changeTextBtn.addActionListener((ActionEvent e) -> {
+            labelTextIndex = (labelTextIndex + 1) % LABEL_TEXTS.length;
+            currentLabelText = LABEL_TEXTS[labelTextIndex];
+            refreshLabel();
+            recordEvent("Change Text clicked");
+        });
+
         RoundedButton changeBgBtn = new RoundedButton("Change Background", BTN_PURPLE, false);
-        changeBgBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // Event: Change Background was clicked → update the JPanel colour
-                bgColorIndex = (bgColorIndex + 1) % BG_COLORS.length;
-                applyBackground(BG_COLORS[bgColorIndex]);
-            }
+        changeBgBtn.setMnemonic(KeyEvent.VK_B);
+        changeBgBtn.addActionListener((ActionEvent e) -> {
+            bgColorIndex = (bgColorIndex + 1) % BG_COLORS.length;
+            animateBackgroundTo(BG_COLORS[bgColorIndex]);
+            recordEvent("Change Background clicked");
         });
 
         row.add(changeTextBtn);
@@ -196,14 +191,59 @@ public class SwingAssignment extends BaseWindow {
         return row;
     }
 
-    /**
-     * Footer information from the Figma design, drawn on the light background
-     * (not on top of the navy wave).
-     */
+    /** "Pick a custom colour..." and "Reset" links. */
+    private JPanel buildLinkRow() {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 0));
+        row.setOpaque(false);
+        row.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        LinkButton pickColorLink = new LinkButton("Pick a custom colour…");
+        pickColorLink.setMnemonic(KeyEvent.VK_P);
+        pickColorLink.addActionListener(e -> {
+            Color chosen = JColorChooser.showDialog(frame, "Choose a background colour", currentBgColor);
+            if (chosen != null) {
+                animateBackgroundTo(chosen);
+                recordEvent("Custom colour picked");
+            }
+        });
+
+        LinkButton resetLink = new LinkButton("Reset");
+        resetLink.setMnemonic(KeyEvent.VK_R);
+        resetLink.addActionListener(e -> {
+            messageField.setText("");
+            labelTextIndex = 0;
+            bgColorIndex = 0;
+            currentLabelText = LABEL_TEXTS[0];
+            refreshLabel();
+            animateBackgroundTo(BG_LIGHT);
+            recordEvent("Reset clicked");
+        });
+
+        row.add(pickColorLink);
+        row.add(resetLink);
+        return row;
+    }
+
+    private JPanel buildStatusRow() {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        row.setOpaque(false);
+        row.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        statusLabel = new JLabel();
+        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        statusLabel.setForeground(TEXT_MUTED);
+        updateStatusLabel();
+
+        row.add(statusLabel);
+        return row;
+    }
+
+    /** Footer information: course code and academic year. */
     private JPanel buildInfoRow() {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        row.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         left.setOpaque(false);
@@ -226,23 +266,78 @@ public class SwingAssignment extends BaseWindow {
         return row;
     }
 
-    /** Updates the content background after the Change Background click. */
-    private void applyBackground(Color color) {
-        panel.setBackground(color);
-        centrePanel.setBackground(color);
-        for (Component c : centrePanel.getComponents()) {
-            if (c instanceof JPanel) ((JPanel) c).setBackground(color);
+    /** Re-renders the label's HTML using a text colour that fits the current background. */
+    private void refreshLabel() {
+        label.setText(formatWelcome(currentLabelText));
+    }
+
+    /**
+     * Formats the welcome heading: large bold title, smaller author line.
+     * Text colour switches to white automatically on dark backgrounds.
+     */
+    private String formatWelcome(String text) {
+        String title = text;
+        String author = "";
+
+        if (text.contains(" by ")) {
+            int at = text.lastIndexOf(" by ");
+            title = text.substring(0, at);
+            author = "by " + text.substring(at + 4);
         }
-        panel.repaint();
+        title = title.replace("First Individual", "First<br>Individual");
+
+        boolean dark = isDark(currentBgColor);
+        String titleColor = dark ? "#FFFFFF" : "#12264E";
+        String authorColor = dark ? "#E6E9F2" : "#697691";
+
+        return "<html><div style='text-align:center; width:640px;'>"
+                + "<span style='font-family:Segoe UI; font-size:22px; font-weight:bold; color:" + titleColor + ";'>"
+                + title
+                + "</span>"
+                + (author.isEmpty()
+                    ? ""
+                    : "<br><span style='font-family:Segoe UI; font-size:14px; font-weight:normal; color:" + authorColor + ";'>"
+                        + author + "</span>")
+                + "</div></html>";
+    }
+
+    /** Smoothly fades panel/southPanel from the current colour to the target colour. */
+    private void animateBackgroundTo(Color target) {
+        if (fadeTimer != null && fadeTimer.isRunning()) fadeTimer.stop();
+
+        final Color start = currentBgColor;
+        final int steps = 20;
+        final int[] step = {0};
+
+        currentBgColor = target;
+        refreshLabel();
+
+        fadeTimer = new Timer(15, e -> {
+            step[0]++;
+            float t = step[0] / (float) steps;
+            Color blended = blend(start, target, t);
+            panel.setBackground(blended);
+            southPanel.setBackground(blended);
+            if (step[0] >= steps) {
+                ((Timer) e.getSource()).stop();
+            }
+        });
+        fadeTimer.start();
+    }
+
+    private void recordEvent(String description) {
+        eventCount++;
+        updateStatusLabel();
+    }
+
+    private void updateStatusLabel() {
+        statusLabel.setText("Events handled: " + eventCount
+                + "   |   Shortcuts: Alt+T, Alt+B, Alt+P, Alt+R");
     }
 
     // ── Wave header / footer ─────────────────────────────────────────────
 
-    /**
-     * Custom panel that paints the navy S-curve from the Figma wireframe.
-     * header = true  → wave at the top
-     * header = false → wave at the bottom
-     */
+    /** Custom panel that paints the navy S-curve from the Figma wireframe. */
     private class WaveBanner extends JPanel {
         private final boolean header;
 
@@ -266,7 +361,6 @@ public class SwingAssignment extends BaseWindow {
             Path2D accent = new Path2D.Double();
 
             if (header) {
-                // Smooth S-curve: lower on the left, rising toward the right
                 navy.moveTo(0, 0);
                 navy.lineTo(w, 0);
                 navy.lineTo(w, h * 0.36);
@@ -278,7 +372,6 @@ public class SwingAssignment extends BaseWindow {
                 accent.curveTo(w * 0.05, h * 0.82 + 7, w * 0.12, h * 0.42 + 7, w * 0.26, h * 0.62 + 7);
                 accent.curveTo(w * 0.52, h * 0.98 + 7, w * 0.78, h * 0.08 + 7, w, h * 0.36 + 7);
             } else {
-                // Mirrored footer wave
                 navy.moveTo(0, h);
                 navy.lineTo(w, h);
                 navy.lineTo(w, h * 0.42);
@@ -308,10 +401,7 @@ public class SwingAssignment extends BaseWindow {
 
     // ── Pill-shaped button ───────────────────────────────────────────────
 
-    /**
-     * Rounded / pill button that matches the Figma buttons.
-     * The pencil or circle mark is painted beside the label.
-     */
+    /** Rounded / pill button with hover and press colour feedback. */
     private class RoundedButton extends JButton {
         private final Color baseColor;
         private final boolean pencilIcon;
@@ -342,6 +432,18 @@ public class SwingAssignment extends BaseWindow {
                 @Override
                 public void mouseExited(MouseEvent e) {
                     currentColor = baseColor;
+                    repaint();
+                }
+
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    currentColor = baseColor.darker();
+                    repaint();
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    currentColor = contains(e.getPoint()) ? baseColor.brighter() : baseColor;
                     repaint();
                 }
             });
@@ -377,6 +479,21 @@ public class SwingAssignment extends BaseWindow {
             g2.setFont(getFont());
             g2.drawString(getText(), textX, textY);
             g2.dispose();
+        }
+    }
+
+    // ── Link-styled button (Pick a custom colour / Reset) ────────────────
+
+    private static class LinkButton extends JButton {
+        LinkButton(String text) {
+            super("<html><u>" + text + "</u></html>");
+            setForeground(new Color(20, 110, 220));
+            setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            setBorderPainted(false);
+            setContentAreaFilled(false);
+            setFocusPainted(false);
+            setOpaque(false);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
         }
     }
 
@@ -417,15 +534,8 @@ public class SwingAssignment extends BaseWindow {
         @Override public int getIconHeight() { return 16; }
     }
 
-    /**
-     * Starts the application on the Swing event-dispatch thread.
-     */
+    /** Starts the application on the Swing event-dispatch thread. */
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                new SwingAssignment();
-            }
-        });
+        SwingUtilities.invokeLater(SwingAssignment::new);
     }
 }

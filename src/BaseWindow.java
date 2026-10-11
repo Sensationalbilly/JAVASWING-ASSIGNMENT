@@ -1,31 +1,29 @@
-import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.GeneralPath;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
 
 /**
- * BaseWindow is the parent / base class for the application window.
+ * BaseWindow is the parent / base class for the application.
  *
- * It creates the JFrame, sets the required window properties, and
- * prepares shared colours used by the child class.
+ * It does not create the JFrame itself — SwingAssignment (the child class)
+ * declares and instantiates frame/panel/label directly, as the assignment
+ * asks. BaseWindow instead holds what the two classes share: the window
+ * title/author passed up through the constructor, the colour palette, and
+ * the drawing/colour utilities reused by the child.
  *
- * SwingAssignment inherits from this class (inheritance) and calls
- * this constructor with super(...) (constructor chaining).
+ * SwingAssignment inherits from this class (inheritance) and reaches it
+ * through super(...) (constructor chaining).
  */
-public class BaseWindow extends JFrame {
+public class BaseWindow {
 
-    // Required by the assignment: a JFrame variable named frame
-    protected JFrame frame;
-
-    // Required by the assignment: a JPanel variable named panel
-    protected JPanel panel;
-
-    // Required by the assignment: a JLabel variable named label
-    protected JLabel label;
+    protected final String windowTitle;
+    protected final String authorName;
 
     // Colour palette taken from the Figma wireframe
     protected static final Color BG_LIGHT     = new Color(236, 241, 248);
@@ -34,6 +32,7 @@ public class BaseWindow extends JFrame {
     protected static final Color CIRCLE_NAVY  = new Color(22, 58, 112);
     protected static final Color TEXT_DARK    = new Color(18, 38, 78);
     protected static final Color TEXT_MUTED   = new Color(105, 118, 145);
+    protected static final Color TEXT_ON_DARK = new Color(255, 255, 255);
     protected static final Color BTN_BLUE     = new Color(20, 140, 245);
     protected static final Color BTN_PURPLE   = new Color(132, 48, 196);
     protected static final Color DIVIDER      = new Color(200, 210, 222);
@@ -41,51 +40,42 @@ public class BaseWindow extends JFrame {
     protected static final Color COFFEE_BROWN = new Color(92, 52, 28);
     protected static final Color STEAM_RED    = new Color(210, 32, 38);
 
+    private static final File ICON_FILE = new File("assets/icon.png");
+
     /**
-     * Constructor: sets up the main window.
+     * Constructor: stores the shared title/author used by the child class.
      *
-     * @param title text shown in the JFrame title bar
+     * @param windowTitle text the child class will give the JFrame
+     * @param authorName  name shown in the welcome label
      */
-    public BaseWindow(String title) {
-        super(title);
-
-        // Assignment requirements: 800 x 800 and close the app on exit
-        this.setSize(800, 800);
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setLocationRelativeTo(null);
-        this.setResizable(false);
-
-        // The assignment asks for a JFrame variable named frame
-        this.frame = this;
-
-        loadIcon();
+    public BaseWindow(String windowTitle, String authorName) {
+        this.windowTitle = windowTitle;
+        this.authorName = authorName;
     }
 
     /**
-     * Loads (or creates) the application icon from the assets folder
-     * using ImageIcon, then applies it to the JFrame.
+     * Loads the application icon from assets/icon.png using ImageIcon.
+     * The icon is only drawn and written to disk if that file is missing —
+     * a real icon ships with the project, so normal runs just load it.
      */
-    private void loadIcon() {
-        File iconFile = new File("assets/icon.png");
-        iconFile.getParentFile().mkdirs();
-
-        try {
-            ImageIO.write(createCoffeeIcon(64), "png", iconFile);
-        } catch (Exception e) {
-            System.err.println("Could not save icon: " + e.getMessage());
+    protected ImageIcon loadApplicationIcon() {
+        if (!ICON_FILE.exists()) {
+            File parent = ICON_FILE.getParentFile();
+            if (parent != null) parent.mkdirs();
+            try {
+                ImageIO.write(renderBadge(64), "png", ICON_FILE);
+            } catch (IOException e) {
+                System.err.println("Could not create a default icon: " + e.getMessage());
+            }
         }
-
-        try {
-            this.setIconImage(new ImageIcon(iconFile.getAbsolutePath()).getImage());
-        } catch (Exception e) {
-            System.err.println("Could not load icon: " + e.getMessage());
-        }
+        return new ImageIcon(ICON_FILE.getAbsolutePath());
     }
 
     /**
-     * Draws a small circular coffee-cup icon used as the window icon.
+     * Renders the circular coffee badge at the given size.
+     * Used for both the window icon and the header badge.
      */
-    private BufferedImage createCoffeeIcon(int size) {
+    protected BufferedImage renderBadge(int size) {
         BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -94,11 +84,8 @@ public class BaseWindow extends JFrame {
         return img;
     }
 
-    /**
-     * Shared drawing routine for the circular coffee badge.
-     * Used both for the window icon and the large centre icon.
-     */
-    protected void drawCoffeeBadge(Graphics2D g, int x, int y, int size) {
+    /** Shared drawing routine for the circular coffee badge. */
+    private void drawCoffeeBadge(Graphics2D g, int x, int y, int size) {
         g.setColor(CIRCLE_NAVY);
         g.fill(new Ellipse2D.Double(x, y, size, size));
 
@@ -145,5 +132,20 @@ public class BaseWindow extends JFrame {
         // Saucer
         g.setStroke(new BasicStroke(Math.max(2f, size / 22f)));
         g.drawLine(cupX - 4, cupY + cupH + 3, cupX + cupW + 6, cupY + cupH + 3);
+    }
+
+    /** Linear-interpolates between two colours; t is clamped to [0, 1]. */
+    protected static Color blend(Color from, Color to, float t) {
+        float clamped = Math.max(0f, Math.min(1f, t));
+        int r = Math.round(from.getRed()   + (to.getRed()   - from.getRed())   * clamped);
+        int g = Math.round(from.getGreen() + (to.getGreen() - from.getGreen()) * clamped);
+        int b = Math.round(from.getBlue()  + (to.getBlue()  - from.getBlue())  * clamped);
+        return new Color(r, g, b);
+    }
+
+    /** True if a colour is dark enough that white text reads better on it than navy. */
+    protected static boolean isDark(Color c) {
+        double luminance = (0.299 * c.getRed() + 0.587 * c.getGreen() + 0.114 * c.getBlue()) / 255.0;
+        return luminance < 0.55;
     }
 }
