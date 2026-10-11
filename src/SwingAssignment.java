@@ -33,9 +33,9 @@ public class SwingAssignment extends BaseWindow {
     // Texts cycled by the Change Text button
     private static final String[] LABEL_TEXTS = {
         "Welcome to Java Swing First Individual Assignment by Mohamed Barry",
-        "Java Swing — Event Driven Programming",
+        "Java Swing — Event Driven Programming by Mohamed Barry",
         "PROG209 — Assignment by Mohamed Barry",
-        "Hello from SwingAssignment!"
+        "Hello from SwingAssignment! by Mohamed Barry"
     };
     private int labelTextIndex = 0;
 
@@ -53,7 +53,8 @@ public class SwingAssignment extends BaseWindow {
     private Timer fadeTimer;
     private int eventCount = 0;
 
-    private JPanel southPanel;
+    private JPanel contentPanel;
+    private JPanel footerPanel;
     private JTextField messageField;
     private JLabel statusLabel;
 
@@ -82,8 +83,8 @@ public class SwingAssignment extends BaseWindow {
     }
 
     /**
-     * Builds the window layout: header (icon + wave), the welcome label
-     * centred directly on panel, and a footer section with the controls.
+     * Builds the window to match the Figma wireframe:
+     * header wave + badge, centred title/author/buttons, footer info + wave.
      */
     private void buildUI() {
         panel = new JPanel(new BorderLayout());
@@ -92,67 +93,111 @@ public class SwingAssignment extends BaseWindow {
 
         panel.add(buildHeader(), BorderLayout.NORTH);
 
-        // Required JLabel — added straight onto panel, no wrapper panel
-        label = new JLabel(formatWelcome(currentLabelText), SwingConstants.CENTER);
-        label.setBorder(BorderFactory.createEmptyBorder(10, 40, 10, 40));
-        panel.add(label, BorderLayout.CENTER);
+        contentPanel = buildContent();
+        panel.add(contentPanel, BorderLayout.CENTER);
 
-        southPanel = buildSouth();
-        panel.add(southPanel, BorderLayout.SOUTH);
+        footerPanel = buildFooter();
+        panel.add(footerPanel, BorderLayout.SOUTH);
     }
 
-    /** Header: navy wave with the coffee badge painted on top of it. */
+    /** Header: navy wave ribbon only (logo lives in content so it is never clipped). */
     private JPanel buildHeader() {
-        WaveBanner header = new WaveBanner(true);
-        header.setLayout(new GridBagLayout());
-        JLabel badge = new JLabel(new ImageIcon(renderBadge(72)));
-        header.add(badge);
-        return header;
+        return new WaveBanner(true);
     }
 
-    /** Footer section: message box, buttons, links, status line, info row, wave. */
-    private JPanel buildSouth() {
-        JPanel south = new JPanel();
-        south.setLayout(new BoxLayout(south, BoxLayout.Y_AXIS));
-        south.setBackground(currentBgColor);
-        south.setBorder(BorderFactory.createEmptyBorder(4, 40, 0, 40));
+    /**
+     * Centre area: logo + title + message on top, buttons locked in the middle
+     * so BoxLayout can never squash them away.
+     */
+    private JPanel buildContent() {
+        JPanel content = new JPanel(new BorderLayout());
+        content.setBackground(currentBgColor);
 
-        south.add(buildMessageRow());
-        south.add(Box.createVerticalStrut(10));
-        south.add(buildButtonRow());
-        south.add(Box.createVerticalStrut(6));
-        south.add(buildLinkRow());
-        south.add(Box.createVerticalStrut(4));
-        south.add(buildStatusRow());
-        south.add(Box.createVerticalStrut(10));
+        // ── Top: logo, welcome label, message field ──────────────────────
+        JPanel top = new JPanel();
+        top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
+        top.setOpaque(false);
+        top.setBorder(BorderFactory.createEmptyBorder(10, 48, 0, 48));
+
+        JLabel badge = new JLabel(new ImageIcon(renderBadge(112)));
+        badge.setAlignmentX(Component.CENTER_ALIGNMENT);
+        top.add(badge);
+        top.add(Box.createVerticalStrut(16));
+
+        // Required JLabel — full welcome text, styled to match the wireframe
+        label = new JLabel(formatWelcome(currentLabelText), SwingConstants.CENTER);
+        label.setAlignmentX(Component.CENTER_ALIGNMENT);
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        // Tall enough for title + full author line (avoids clipping "Mohamed Barry")
+        label.setPreferredSize(new Dimension(700, 110));
+        label.setMinimumSize(new Dimension(500, 110));
+        label.setMaximumSize(new Dimension(700, 110));
+        top.add(label);
+
+        top.add(Box.createVerticalStrut(28));
+        top.add(buildMessageRow());
+
+        content.add(top, BorderLayout.NORTH);
+
+        // ── Middle: buttons + links + status (always visible) ────────────
+        JPanel middle = new JPanel();
+        middle.setLayout(new BoxLayout(middle, BoxLayout.Y_AXIS));
+        middle.setOpaque(false);
+        middle.setBorder(BorderFactory.createEmptyBorder(20, 48, 8, 48));
+
+        middle.add(buildButtonRow());
+        middle.add(Box.createVerticalStrut(14));
+        middle.add(buildLinkRow());
+        middle.add(Box.createVerticalStrut(10));
+        middle.add(buildStatusRow());
+        middle.add(Box.createVerticalGlue());
+
+        content.add(middle, BorderLayout.CENTER);
+        return content;
+    }
+
+    /** Footer: divider, course/year row, bottom wave. */
+    private JPanel buildFooter() {
+        JPanel footer = new JPanel();
+        footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
+        footer.setBackground(currentBgColor);
+        footer.setBorder(BorderFactory.createEmptyBorder(0, 40, 0, 40));
 
         JSeparator line = new JSeparator();
         line.setForeground(DIVIDER);
         line.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        south.add(line);
+        footer.add(line);
 
-        south.add(Box.createVerticalStrut(8));
-        south.add(buildInfoRow());
-        south.add(Box.createVerticalStrut(6));
-        south.add(new WaveBanner(false));
-        return south;
+        footer.add(Box.createVerticalStrut(12));
+        footer.add(buildInfoRow());
+        footer.add(Box.createVerticalStrut(8));
+        footer.add(new WaveBanner(false));
+        return footer;
     }
 
     /** Text box: type a custom message, press Enter to show it in the label. */
     private JPanel buildMessageRow() {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         row.setOpaque(false);
         row.setAlignmentX(Component.CENTER_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
 
         JLabel hint = new JLabel("Type a message and press Enter:");
-        hint.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        hint.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         hint.setForeground(TEXT_MUTED);
 
-        messageField = new JTextField(26);
+        messageField = new JTextField(22);
+        messageField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        messageField.setPreferredSize(new Dimension(260, 30));
+        messageField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(180, 195, 215), 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
         messageField.addActionListener(e -> {
             String typed = messageField.getText().trim();
             if (!typed.isEmpty()) {
-                currentLabelText = typed;
+                currentLabelText = typed.contains(" by ")
+                        ? typed
+                        : typed + " by " + authorName;
                 refreshLabel();
                 recordEvent("Custom message shown");
             }
@@ -163,13 +208,21 @@ public class SwingAssignment extends BaseWindow {
         return row;
     }
 
-    /** Change Text / Change Background buttons. */
+    /** Change Text / Change Background — equal size, centred, evenly spaced. */
     private JPanel buildButtonRow() {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 22, 0));
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 24, 0));
         row.setOpaque(false);
         row.setAlignmentX(Component.CENTER_ALIGNMENT);
+        row.setPreferredSize(new Dimension(700, 56));
+        row.setMinimumSize(new Dimension(500, 56));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+
+        Dimension buttonSize = new Dimension(240, 50);
 
         RoundedButton changeTextBtn = new RoundedButton("Change Text", BTN_BLUE, true);
+        changeTextBtn.setPreferredSize(buttonSize);
+        changeTextBtn.setMinimumSize(buttonSize);
+        changeTextBtn.setMaximumSize(buttonSize);
         changeTextBtn.setMnemonic(KeyEvent.VK_T);
         changeTextBtn.addActionListener((ActionEvent e) -> {
             labelTextIndex = (labelTextIndex + 1) % LABEL_TEXTS.length;
@@ -179,6 +232,9 @@ public class SwingAssignment extends BaseWindow {
         });
 
         RoundedButton changeBgBtn = new RoundedButton("Change Background", BTN_PURPLE, false);
+        changeBgBtn.setPreferredSize(buttonSize);
+        changeBgBtn.setMinimumSize(buttonSize);
+        changeBgBtn.setMaximumSize(buttonSize);
         changeBgBtn.setMnemonic(KeyEvent.VK_B);
         changeBgBtn.addActionListener((ActionEvent e) -> {
             bgColorIndex = (bgColorIndex + 1) % BG_COLORS.length;
@@ -191,11 +247,12 @@ public class SwingAssignment extends BaseWindow {
         return row;
     }
 
-    /** "Pick a custom colour..." and "Reset" links. */
+    /** "Pick a custom colour..." and "Reset" links, centred under the buttons. */
     private JPanel buildLinkRow() {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 0));
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 28, 0));
         row.setOpaque(false);
         row.setAlignmentX(Component.CENTER_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
 
         LinkButton pickColorLink = new LinkButton("Pick a custom colour…");
         pickColorLink.setMnemonic(KeyEvent.VK_P);
@@ -228,6 +285,7 @@ public class SwingAssignment extends BaseWindow {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         row.setOpaque(false);
         row.setAlignmentX(Component.CENTER_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
 
         statusLabel = new JLabel();
         statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
@@ -238,7 +296,7 @@ public class SwingAssignment extends BaseWindow {
         return row;
     }
 
-    /** Footer information: course code and academic year. */
+    /** Footer information: course code (left) and academic year (right). */
     private JPanel buildInfoRow() {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
@@ -266,42 +324,41 @@ public class SwingAssignment extends BaseWindow {
         return row;
     }
 
-    /** Re-renders the label's HTML using a text colour that fits the current background. */
+    /** Re-renders the label using colours that fit the current background. */
     private void refreshLabel() {
         label.setText(formatWelcome(currentLabelText));
     }
 
     /**
-     * Formats the welcome heading: large bold title, smaller author line.
-     * Text colour switches to white automatically on dark backgrounds.
+     * Formats the required welcome label: bold title + author name under it,
+     * matching the Figma wireframe alignment.
      */
     private String formatWelcome(String text) {
         String title = text;
-        String author = "";
+        String author = authorName;
 
         if (text.contains(" by ")) {
             int at = text.lastIndexOf(" by ");
             title = text.substring(0, at);
-            author = "by " + text.substring(at + 4);
+            author = text.substring(at + 4).trim();
         }
-        title = title.replace("First Individual", "First<br>Individual");
 
         boolean dark = isDark(currentBgColor);
         String titleColor = dark ? "#FFFFFF" : "#12264E";
         String authorColor = dark ? "#E6E9F2" : "#697691";
 
-        return "<html><div style='text-align:center; width:640px;'>"
-                + "<span style='font-family:Segoe UI; font-size:22px; font-weight:bold; color:" + titleColor + ";'>"
+        return "<html><div style='text-align:center;'>"
+                + "<span style='font-family:Segoe UI; font-size:24px; font-weight:bold; color:"
+                + titleColor + ";'>"
                 + title
-                + "</span>"
-                + (author.isEmpty()
-                    ? ""
-                    : "<br><span style='font-family:Segoe UI; font-size:14px; font-weight:normal; color:" + authorColor + ";'>"
-                        + author + "</span>")
-                + "</div></html>";
+                + "</span><br>"
+                + "<span style='font-family:Segoe UI; font-size:16px; font-weight:normal; color:"
+                + authorColor + ";'>"
+                + author
+                + "</span></div></html>";
     }
 
-    /** Smoothly fades panel/southPanel from the current colour to the target colour. */
+    /** Smoothly fades panel/content/footer from the current colour to the target. */
     private void animateBackgroundTo(Color target) {
         if (fadeTimer != null && fadeTimer.isRunning()) fadeTimer.stop();
 
@@ -317,7 +374,8 @@ public class SwingAssignment extends BaseWindow {
             float t = step[0] / (float) steps;
             Color blended = blend(start, target, t);
             panel.setBackground(blended);
-            southPanel.setBackground(blended);
+            contentPanel.setBackground(blended);
+            footerPanel.setBackground(blended);
             if (step[0] >= steps) {
                 ((Timer) e.getSource()).stop();
             }
@@ -344,7 +402,10 @@ public class SwingAssignment extends BaseWindow {
         WaveBanner(boolean header) {
             this.header = header;
             setOpaque(false);
-            setPreferredSize(new Dimension(800, header ? 128 : 96));
+            int h = header ? 110 : 96;
+            setPreferredSize(new Dimension(800, h));
+            setMinimumSize(new Dimension(800, h));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
         }
 
         @Override
@@ -420,7 +481,7 @@ public class SwingAssignment extends BaseWindow {
             setContentAreaFilled(false);
             setOpaque(false);
             setCursor(new Cursor(Cursor.HAND_CURSOR));
-            setPreferredSize(new Dimension(230, 48));
+            setMargin(new Insets(0, 0, 0, 0));
 
             addMouseListener(new MouseAdapter() {
                 @Override
@@ -453,29 +514,35 @@ public class SwingAssignment extends BaseWindow {
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
             int arc = getHeight();
             g2.setColor(currentColor);
             g2.fillRoundRect(0, 0, getWidth(), getHeight(), arc, arc);
 
-            g2.setColor(Color.WHITE);
-            int iconX = 22;
+            FontMetrics fm = g2.getFontMetrics(getFont());
+            int iconGap = 10;
+            int iconW = 16;
+            int textW = fm.stringWidth(getText());
+            int totalW = iconW + iconGap + textW;
+            int startX = (getWidth() - totalW) / 2;
             int cy = getHeight() / 2;
 
+            g2.setColor(Color.WHITE);
             if (pencilIcon) {
+                int ix = startX + 2;
                 g2.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2.drawLine(iconX, cy + 6, iconX + 12, cy - 6);
+                g2.drawLine(ix, cy + 6, ix + 12, cy - 6);
                 g2.fillPolygon(
-                        new int[]{iconX + 12, iconX + 16, iconX + 14},
+                        new int[]{ix + 12, ix + 16, ix + 14},
                         new int[]{cy - 6, cy - 8, cy - 3},
                         3);
             } else {
-                g2.fill(new Ellipse2D.Double(iconX, cy - 6, 12, 12));
+                g2.fill(new Ellipse2D.Double(startX + 2, cy - 6, 12, 12));
             }
 
-            FontMetrics fm = g2.getFontMetrics(getFont());
-            int textX = iconX + 26;
-            int textY = cy + fm.getAscent() / 2 - 2;
+            int textX = startX + iconW + iconGap;
+            int textY = cy + (fm.getAscent() - fm.getDescent()) / 2;
             g2.setFont(getFont());
             g2.drawString(getText(), textX, textY);
             g2.dispose();
